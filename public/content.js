@@ -16,6 +16,17 @@
     return role === 'textbox';
   }
 
+  async function saveClip({ title, url, summary }) {
+    try {
+      const { clips } = await chrome.storage.local.get(['clips']);
+      const next = Array.isArray(clips) ? clips : [];
+      next.unshift({ title, url, summary, createdAt: Date.now() });
+      await chrome.storage.local.set({ clips: next });
+    } catch (e) {
+      console.warn('[Hubble] Failed to save clip to storage:', e);
+    }
+  }
+
   async function summarizePage() {
     if (inFlight) return;
     inFlight = true;
@@ -53,8 +64,9 @@
         context: `${document.title} — ${location.hostname}`,
       });
       const text = typeof out === 'string' ? out : String(out);
+      await saveClip({ title: document.title, url: location.href, summary: text });
       // eslint-disable-next-line no-console
-      console.log('[Hubble] Summary (markdown):\n', text);
+      console.log('[Hubble] Summary saved to storage.');
     } catch (err) {
       console.warn('[Hubble] Summarization failed:', err);
       console.log('[Hubble] Page title:', document.title);
